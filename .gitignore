@@ -25,3 +25,13 @@ yarn-error.log*
 # Google Cloud service account keys
 server/credentials/
 *.json
+
+# Additional ignores for QuickCode
+client/node_modules/
+server/node_modules/
+client/dist/
+server/dist/
+
+# Environment files
+client/.env
+server/.env
