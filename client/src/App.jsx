@@ -443,7 +443,10 @@ const resolvedFullName = (() => {
     <>
 {/* Header band */}
 <div className="qc-header">
-  <div className="qc-container" style={{ maxWidth: CONTAINER_MAX, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+  <div
+    className="qc-container"
+    style={{ maxWidth: CONTAINER_MAX, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+  >
     <h3 style={{ margin: 0, color: '#495057', fontSize: '200%' }}>
       {user ? `Welcome, ${resolvedFullName}` : 'Welcome,'}
     </h3>
@@ -453,8 +456,16 @@ const resolvedFullName = (() => {
         <button
           className="qc-cta"
           onClick={async () => {
-            try { await logout() } finally { window.location.reload() }
+            try {
+              await logout();                // firebase signOut
+            } catch (e) {
+              console.error(e);
+            } finally {
+              // ensure UI resets to signed-out state on all browsers
+              window.location.reload();
+            }
           }}
+          title={user?.email || 'Signed in'}
           style={{ height: 40, minWidth: 110, fontSize: 16 }}
         >
           Sign out
@@ -463,7 +474,14 @@ const resolvedFullName = (() => {
         <button
           className="qc-cta"
           onClick={async () => {
-            try { await signIn() } finally { window.location.reload() }
+            try {
+              await signIn();                // firebase Google signIn
+            } catch (e) {
+              console.error(e);
+            } finally {
+              // pick up new auth state immediately
+              window.location.reload();
+            }
           }}
           style={{ height: 40, minWidth: 110, fontSize: 16 }}
         >
