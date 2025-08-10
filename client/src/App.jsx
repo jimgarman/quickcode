@@ -39,7 +39,7 @@ function firstNameFromUsername(u) {
 
 // Sort helper by Transaction Description
 const TXN_HEADER = 'Transaction Description'
-const TXN_HEADER_OLD = 'Transcation Description' // tolerate legacy header from sheet
+const TXN_HEADER_OLD = 'Transcation Description' // tolerate legacy header
 function txnKey(r) {
   return (r?.[TXN_HEADER] ?? r?.[TXN_HEADER_OLD] ?? '').toString()
 }
@@ -88,7 +88,7 @@ export default function App() {
   const [triedSubmit, setTriedSubmit] = useState(false)
   const [triedApprove, setTriedApprove] = useState(false)
 
-  // NEW: loading indicators
+  // Buttons: loading indicators
   const [submitting, setSubmitting] = useState(false)
   const [approving, setApproving] = useState(false)
 
@@ -187,7 +187,6 @@ export default function App() {
           for (const row of g.rows || []) {
             const id = row['ID']
             const hasJob = !!(row['Job ID'] && String(row['Job ID']).trim())
-
             seed[id] = {
               notes: row['Notes'] || '',
               jobId: row['Job ID'] || '',
@@ -294,17 +293,17 @@ export default function App() {
     }
   }
 
-const resolvedFullName = (() => {
-  const email = (user?.email || '').toLowerCase()
-  const uname = email.split('@')[0]
-  const u = usersByEmail[email] || usersByUsername[uname]
-  if (u) {
-    if (u.full && u.full.trim()) return u.full.trim()
-    const full = [u.first, u.last].filter(Boolean).join(' ').trim()
-    if (full) return full
-  }
-  return user?.displayName || email
-})()
+  const resolvedFullName = (() => {
+    const email = (user?.email || '').toLowerCase()
+    const uname = email.split('@')[0]
+    const u = usersByEmail[email] || usersByUsername[uname]
+    if (u) {
+      if (u.full && u.full.trim()) return u.full.trim()
+      const full = [u.first, u.last].filter(Boolean).join(' ').trim()
+      if (full) return full
+    }
+    return user?.displayName || email
+  })()
 
   const thStyle = 'qc-th'
   const tdStyle = 'qc-td'
@@ -441,144 +440,79 @@ const resolvedFullName = (() => {
 
   return (
     <>
-{/* Header band */}
-<div className="qc-header">
-  <div
-    className="qc-container"
-    style={{ maxWidth: CONTAINER_MAX, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-  >
-    <h3 style={{ margin: 0, color: '#495057', fontSize: '200%' }}>
-      {user ? `Welcome, ${resolvedFullName}` : 'Welcome! Sign in with your Google Account'}
-    </h3>
-
-    <div>
-      {user ? (
-        <button
-          className="qc-cta"
-          onClick={async () => {
-            try { await logout(); } catch (e) { console.error(e); }
-            finally { window.location.reload(); }
-          }}
-          title={user?.email || 'Signed in'}
-          style={{ height: 40, minWidth: 110, fontSize: 16 }}
+      {/* Header band */}
+      <div className="qc-header">
+        <div
+          className="qc-container"
+          style={{ maxWidth: CONTAINER_MAX, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
         >
-          Sign out
-        </button>
-      ) : (
-        <button
-          className="qc-cta"
-          onClick={async () => {
-            try { await signIn(); } catch (e) { console.error(e); }
-            finally { window.location.reload(); }
-          }}
-          style={{ height: 40, minWidth: 110, fontSize: 16 }}
-        >
-          Sign in
-        </button>
-      )}
-    </div>
-  </div>
-</div>
+          <h3 style={{ margin: 0, color: '#495057', fontSize: '200%' }}>
+            {user ? `Welcome, ${resolvedFullName}` : 'Welcome! Sign in with your Google Account'}
+          </h3>
 
-{/* Main container */}
-<div className="qc-container" style={{ maxWidth: CONTAINER_MAX }}>
-  {user ? (
-    <>
-      {/* Your Transactions */}
-      <h3 style={{ marginTop: 8 }}>Your Transactions</h3>
-      {loading && <div>Loading…</div>}
-      {!loading && (rows || []).length === 0 && (
-        <div>Good job! All of your transactions are coded and submitted.</div>
-      )}
-      {!loading && (rows || []).length > 0 && (
-        <>
-          <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
-            <table className="qc-table">
-              <thead>
-                <tr>
-                  {(injectedHeaders || []).map((h, i) => (
-                    <th key={`${h}-${i}`} className={thStyle}>
-                      {h === '~OR~' ? '' : h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(rows || []).map((r) => {
-                  const id = r['ID']
-                  const e = { ...(edits[id] || {}), row: r }
-                  return (
-                    <tr key={id}>
-                      {(injectedHeaders || []).map((h, idx) => {
-                        if (h === '~OR~') {
-                          return (
-                            <td
-                              key={`or-${id}-${idx}`}
-                              className={tdStyle}
-                              style={{ textAlign: 'center', fontWeight: 600 }}
-                            >
-                              OR
-                            </td>
-                          )
-                        }
-                        return renderEditableCell('mine', id, h, e, setEdits)
-                      })}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div>
+            {user ? (
+              <button
+                className="qc-cta"
+                onClick={async () => {
+                  try { await logout() } catch (e) { console.error(e) }
+                  finally { window.location.reload() }
+                }}
+                title={user?.email || 'Signed in'}
+                style={{ height: 40, minWidth: 110, fontSize: 16 }}
+              >
+                Sign out
+              </button>
+            ) : (
+              <button
+                className="qc-cta"
+                onClick={async () => {
+                  try { await signIn() } catch (e) { console.error(e) }
+                  finally { window.location.reload() }
+                }}
+                style={{ height: 40, minWidth: 110, fontSize: 16 }}
+              >
+                Sign in
+              </button>
+            )}
           </div>
-          <div className="qc-actions">
-            <button
-              className="qc-cta"
-              onClick={submitAll}
-              disabled={!allYourRowsValid || submitting}
-            >
-              {submitting ? 'Submitting…' : 'Submit'}
-            </button>
-          </div>
-        </>
-      )}
+        </div>
+      </div>
 
-      {/* Approvals */}
-      <hr style={{ margin: '32px 0', border: 0, borderTop: '1px solid #eee' }} />
-      {!approvalsLoading && (approvals || []).length > 0 && (
-        <>
-          {(approvals || []).map((group) => {
-            // Normalize purchaser and try both username and email lookups
-            const purchaser = (group.purchaser || '').toLowerCase()
-            const domainFromMe = (user?.email || '').split('@')[1] || ''
-            const emailGuess = domainFromMe ? `${purchaser}@${domainFromMe}` : ''
-            const u = usersByUsername[purchaser] || usersByEmail[emailGuess] || null
-            const first = (u?.first && u.first.trim()) || firstNameFromUsername(purchaser)
-            const label = `Approve ${first}'s Transactions`
-
-            return (
-              <div key={group.purchaser} style={{ marginTop: 24 }}>
-                <h3 style={{ margin: '8px 0 12px' }}>{label}</h3>
+      {/* Main container */}
+      <div className="qc-container" style={{ maxWidth: CONTAINER_MAX }}>
+        {user ? (
+          <>
+            {/* Your Transactions */}
+            <h3 style={{ marginTop: 8 }}>Your Transactions</h3>
+            {loading && <div>Loading…</div>}
+            {!loading && (rows || []).length === 0 && (
+              <div>Good job! All of your transactions are coded and submitted.</div>
+            )}
+            {!loading && (rows || []).length > 0 && (
+              <>
                 <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
                   <table className="qc-table">
                     <thead>
                       <tr>
                         {(injectedHeaders || []).map((h, i) => (
-                          <th key={`${group.purchaser}-${h}-${i}`} className={thStyle}>
+                          <th key={`${h}-${i}`} className={thStyle}>
                             {h === '~OR~' ? '' : h}
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {(group.rows || []).map((r) => {
+                      {(rows || []).map((r) => {
                         const id = r['ID']
-                        const e = { ...(approvalsEdits[id] || {}), row: r }
+                        const e = { ...(edits[id] || {}), row: r }
                         return (
                           <tr key={id}>
-                            {(injectedHeaders || []).map((h, i) => {
+                            {(injectedHeaders || []).map((h, idx) => {
                               if (h === '~OR~') {
                                 return (
                                   <td
-                                    key={`or-appr-${id}-${i}`}
+                                    key={`or-${id}-${idx}`}
                                     className={tdStyle}
                                     style={{ textAlign: 'center', fontWeight: 600 }}
                                   >
@@ -586,7 +520,7 @@ const resolvedFullName = (() => {
                                   </td>
                                 )
                               }
-                              return renderEditableCell('appr', id, h, e, setApprovalsEdits)
+                              return renderEditableCell('mine', id, h, e, setEdits)
                             })}
                           </tr>
                         )
@@ -594,88 +528,96 @@ const resolvedFullName = (() => {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )
-          })}
-          <div className="qc-actions">
-            <button
-              className="qc-cta"
-              onClick={approveAll}
-              disabled={!allApprovalRowsValid || approving}
-            >
-              {approving ? 'Approving…' : 'Approve'}
-            </button>
-          </div>
-        </>
-      )}
-    </>
-  ) : (
-    // Signed-out landing message
-    <div style={{ padding: '32px 0', color: '#495057', fontSize: 18 }}>
-      Welcome! Sign in with your Google Account using the button above.
-    </div>
-  )}
-</div>
-// Normalize purchaser and try both username and email lookups
-const purchaser = (group.purchaser || '').toLowerCase()
-const domainFromMe = (user?.email || '').split('@')[1] || ''
-const emailGuess = domainFromMe ? `${purchaser}@${domainFromMe}` : ''
-
-const u =
-  usersByUsername[purchaser] ||
-  usersByEmail[emailGuess] ||
-  null
-
-const first =
-  (u?.first && u.first.trim()) ||
-  firstNameFromUsername(purchaser)
-
-const label = `Approve ${first}'s Transactions`
-              return (
-                <div key={group.purchaser} style={{ marginTop: 24 }}>
-                  <h3 style={{ margin: '8px 0 12px' }}>{label}</h3>
-                  <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
-                    <table className="qc-table">
-                      <thead>
-                        <tr>
-                          {(injectedHeaders || []).map((h, i) => (
-                            <th key={`${group.purchaser}-${h}-${i}`} className={thStyle}>
-                              {h === '~OR~' ? '' : h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(group.rows || []).map((r) => {
-                          const id = r['ID']
-                          const e = { ...(approvalsEdits[id] || {}), row: r }
-                          return (
-                            <tr key={id}>
-                              {(injectedHeaders || []).map((h, i) => {
-                                if (h === '~OR~') {
-                                  return <td key={`or-appr-${id}-${i}`} className={tdStyle} style={{ textAlign: 'center', fontWeight: 600 }}>OR</td>
-                                }
-                                return renderEditableCell('appr', id, h, e, setApprovalsEdits)
-                              })}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="qc-actions">
+                  <button
+                    className="qc-cta"
+                    onClick={submitAll}
+                    disabled={!allYourRowsValid || submitting}
+                  >
+                    {submitting ? 'Submitting…' : 'Submit'}
+                  </button>
                 </div>
-              )
-            })}
-            <div className="qc-actions">
-              <button
-                className="qc-cta"
-                onClick={approveAll}
-                disabled={!allApprovalRowsValid || approving}
-              >
-                {approving ? 'Approving…' : 'Approve'}
-              </button>
-            </div>
+              </>
+            )}
+
+            {/* Approvals */}
+            <hr style={{ margin: '32px 0', border: 0, borderTop: '1px solid #eee' }} />
+            {!approvalsLoading && (approvals || []).length > 0 && (
+              <>
+                {(approvals || []).map((group) => {
+                  // Normalize purchaser and try both username and email lookups
+                  const purchaser = (group.purchaser || '').toLowerCase()
+                  const domainFromMe = (user?.email || '').split('@')[1] || ''
+                  const emailGuess = domainFromMe ? `${purchaser}@${domainFromMe}` : ''
+                  const u =
+                    usersByUsername[purchaser] ||
+                    usersByEmail[emailGuess] ||
+                    null
+                  const first =
+                    (u?.first && u.first.trim()) ||
+                    firstNameFromUsername(purchaser)
+                  const label = `Approve ${first}'s Transactions`
+
+                  return (
+                    <div key={group.purchaser} style={{ marginTop: 24 }}>
+                      <h3 style={{ margin: '8px 0 12px' }}>{label}</h3>
+                      <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
+                        <table className="qc-table">
+                          <thead>
+                            <tr>
+                              {(injectedHeaders || []).map((h, i) => (
+                                <th key={`${group.purchaser}-${h}-${i}`} className={thStyle}>
+                                  {h === '~OR~' ? '' : h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(group.rows || []).map((r) => {
+                              const id = r['ID']
+                              const e = { ...(approvalsEdits[id] || {}), row: r }
+                              return (
+                                <tr key={id}>
+                                  {(injectedHeaders || []).map((h, i) => {
+                                    if (h === '~OR~') {
+                                      return (
+                                        <td
+                                          key={`or-appr-${id}-${i}`}
+                                          className={tdStyle}
+                                          style={{ textAlign: 'center', fontWeight: 600 }}
+                                        >
+                                          OR
+                                        </td>
+                                      )
+                                    }
+                                    return renderEditableCell('appr', id, h, e, setApprovalsEdits)
+                                  })}
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="qc-actions">
+                  <button
+                    className="qc-cta"
+                    onClick={approveAll}
+                    disabled={!allApprovalRowsValid || approving}
+                  >
+                    {approving ? 'Approving…' : 'Approve'}
+                  </button>
+                </div>
+              </>
+            )}
           </>
+        ) : (
+          // Signed-out landing message
+          <div style={{ padding: '32px 0', color: '#495057', fontSize: 18 }}>
+            Welcome! Sign in with your Google Account using the button above.
+          </div>
         )}
       </div>
     </>
