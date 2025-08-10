@@ -443,9 +443,26 @@ const resolvedFullName = (() => {
     <>
       {/* Header band */}
       <div className="qc-header">
-        <div className="qc-container" style={{ maxWidth: CONTAINER_MAX }}>
+        <div
+          className="qc-container"
+          style={{
+            maxWidth: CONTAINER_MAX,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
           {/* 25% bigger welcome text */}
-          <h3 style={{ margin: 0, color: '#495057', fontSize: '200%' }}>Welcome, {resolvedFullName}</h3>
+          <h3 style={{ margin: 0, color: '#495057', fontSize: '200%' }}>
+            Welcome, {resolvedFullName}
+          </h3>
+          <button
+            className="qc-cta"
+            onClick={logout}
+            style={{ height: 36, minWidth: 0, padding: '0 12px', fontSize: 14 }}
+          >
+            Sign out
+          </button>
         </div>
       </div>
 
