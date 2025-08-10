@@ -1,0 +1,178 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* --- QuickCode buttons --- */
+.primaryBtn {
+  background: #2563eb;       /* blue-600 */
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.primaryBtn:hover {
+  background: #1e40af;       /* blue-800 */
+}
+
+/* Large variant for Submit / Approve */
+.primaryBtn.lg {
+  padding: 14px 26px;
+  font-size: 18px;
+}
+
+.big-action-btn {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.2em;
+  cursor: pointer;
+}
+.big-action-btn:hover {
+  background-color: #0069d9;
+}
+
+/* === QuickCode UI polish === */
+:root{
+  --qc-border:#cfd4dc;
+  --qc-placeholder:#9aa0a6;
+  --qc-header-bg:#f1f3f5;
+  --qc-blue:#2f6feb;
+  --qc-blue-hover:#275bd3;
+}
+
+.qc-header {
+  background: var(--qc-header-bg);
+  padding: 28px 0 20px;
+  margin: -16px 0 16px; /* bleed to top */
+}
+
+.qc-container {
+  max-width: 1375px;
+  margin: 0 auto;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* compact inputs (≈50% less padding vs previous pass) */
+.qc-input,
+.qc-select {
+  height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--qc-border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.qc-select.placeholder,
+.qc-input::placeholder {
+  color: var(--qc-placeholder);
+}
+
+.qc-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+.qc-th {
+  text-align: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+  white-space: nowrap;
+}
+.qc-td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f3f3;
+  white-space: nowrap;
+}
+
+.qc-actions {
+  display: flex;
+  justify-content: flex-end; /* right aligned as in screenshot */
+  margin-top: 16px;
+}
+
+.qc-cta {
+  min-width: 160px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--qc-blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  border: 0;
+  cursor: pointer;
+}
+.qc-cta:hover { background: var(--qc-blue-hover); }

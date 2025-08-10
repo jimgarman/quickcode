@@ -1,0 +1,188 @@
+/* ================================
+   QuickCode UI — Global variables
+   ================================ */
+:root {
+  --qc-border:        #cfd4dc;
+  --qc-placeholder:   #9aa0a6;
+  --qc-header-bg:     #f1f3f5;
+  --qc-blue:          #2f6feb;
+  --qc-blue-hover:    #275bd3;
+}
+
+/* ================================
+   Page header band
+   ================================ */
+.qc-header {
+  background: var(--qc-header-bg);
+  padding: 28px 0 20px;
+  margin: -16px 0 16px;
+}
+
+/* Main content container */
+.qc-container {
+  max-width: 1375px;
+  margin: 0 auto;
+  padding-left: 30px;   /* ⬅ space from left edge */
+  padding-right: 30px;  /* ⬅ space from right edge */
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ================================
+   Form controls
+   ================================ */
+.qc-input,
+.qc-select {
+  height: 40px;                 /* matches dropdown height */
+  padding: 6px 10px;            /* compact (reduce whitespace) */
+  box-sizing: border-box;
+  border: 1px solid var(--qc-border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  max-width: 100%;              /* never overflow cells */
+}
+
+.qc-select.placeholder,
+.qc-input::placeholder {
+  color: var(--qc-placeholder);
+}
+
+/* ================================
+   Table
+   ================================ */
+.qc-table {
+  border-collapse: separate;    /* let cells size precisely */
+  border-spacing: 0;            /* no extra gaps between columns/rows */
+  width: 100%;
+  font-size: 14px;
+}
+
+.qc-th {
+  text-align: center;
+  padding: 8px 10px;            /* slightly tighter than default */
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+  white-space: nowrap;
+}
+
+.qc-td {
+  padding: 8px 10px;            /* controls the visible spacing between columns */
+  border-bottom: 1px solid #f3f3f3;
+  white-space: nowrap;
+}
+
+/* Make controls consume the cell width cleanly */
+.qc-td .qc-input,
+.qc-td .qc-select {
+  width: 100%;
+}
+
+/* Amount column aligns right */
+.qc-amount {
+  text-align: right;
+}
+
+/* ================================
+   Column width overrides
+   Change the width values to adjust each column independently.
+   nth-child index matches column order in the table.
+   ================================ */
+
+/* 1 — Date */
+.qc-table th:nth-child(1),
+.qc-table td:nth-child(1) {
+  width: 80px;
+}
+
+/* 2 — Transaction Description */
+.qc-table th:nth-child(2),
+.qc-table td:nth-child(2) {
+  width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 3 — Amount */
+.qc-table th:nth-child(3),
+.qc-table td:nth-child(3) {
+  width: 95px;
+  text-align: right;
+}
+
+/* 4 — Notes */
+.qc-table th:nth-child(4),
+.qc-table td:nth-child(4) {
+  width: 220px;
+}
+
+/* 5 — Job ID */
+.qc-table th:nth-child(5),
+.qc-table td:nth-child(5) {
+  width: 120px;
+}
+
+/* 6 — Cost Code */
+.qc-table th:nth-child(6),
+.qc-table td:nth-child(6) {
+  width: 170px;
+}
+
+/* 7 — OR (injected column) */
+.qc-table th:nth-child(7),
+.qc-table td:nth-child(7) {
+  width: 30px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* 8 — Division */
+.qc-table th:nth-child(8),
+.qc-table td:nth-child(8) {
+  width: 80px;
+  text-align: center;
+}
+
+/* 9 — GL Account */
+.qc-table th:nth-child(9),
+.qc-table td:nth-child(9) {
+  width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ================================
+   Footer actions (Submit/Approve)
+   ================================ */
+.qc-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.qc-cta {
+  min-width: 160px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--qc-blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  border: 0;
+  cursor: pointer;
+}
+.qc-cta:hover {
+  background: var(--qc-blue-hover);
+}
+
+/* Invalid field highlight */
+.qc-invalid {
+  border-color: #dc3545 !important;           /* red */
+  box-shadow: inset 0 0 0 1px rgba(220,53,69,0.08);
+}
+
+/* Disabled CTA state */
+.qc-cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
