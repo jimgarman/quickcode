@@ -445,12 +445,7 @@ const resolvedFullName = (() => {
 <div className="qc-header">
   <div
     className="qc-container"
-    style={{
-      maxWidth: CONTAINER_MAX,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-    }}
+    style={{ maxWidth: CONTAINER_MAX, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
   >
     <h3 style={{ margin: 0, color: '#495057', fontSize: '200%' }}>
       {user ? `Welcome, ${resolvedFullName}` : 'Welcome! Sign in with your Google Account'}
@@ -461,13 +456,8 @@ const resolvedFullName = (() => {
         <button
           className="qc-cta"
           onClick={async () => {
-            try {
-              await logout(); // firebase signOut
-            } catch (e) {
-              console.error(e);
-            } finally {
-              window.location.reload();
-            }
+            try { await logout(); } catch (e) { console.error(e); }
+            finally { window.location.reload(); }
           }}
           title={user?.email || 'Signed in'}
           style={{ height: 40, minWidth: 110, fontSize: 16 }}
@@ -478,13 +468,8 @@ const resolvedFullName = (() => {
         <button
           className="qc-cta"
           onClick={async () => {
-            try {
-              await signIn(); // firebase Google signIn
-            } catch (e) {
-              console.error(e);
-            } finally {
-              window.location.reload();
-            }
+            try { await signIn(); } catch (e) { console.error(e); }
+            finally { window.location.reload(); }
           }}
           style={{ height: 40, minWidth: 110, fontSize: 16 }}
         >
@@ -495,6 +480,7 @@ const resolvedFullName = (() => {
   </div>
 </div>
 
+{/* Main container */}
 <div className="qc-container" style={{ maxWidth: CONTAINER_MAX }}>
   {user ? (
     <>
@@ -519,8 +505,8 @@ const resolvedFullName = (() => {
               </thead>
               <tbody>
                 {(rows || []).map((r) => {
-                  const id = r['ID'];
-                  const e = { ...(edits[id] || {}), row: r };
+                  const id = r['ID']
+                  const e = { ...(edits[id] || {}), row: r }
                   return (
                     <tr key={id}>
                       {(injectedHeaders || []).map((h, idx) => {
@@ -533,12 +519,12 @@ const resolvedFullName = (() => {
                             >
                               OR
                             </td>
-                          );
+                          )
                         }
-                        return renderEditableCell('mine', id, h, e, setEdits);
+                        return renderEditableCell('mine', id, h, e, setEdits)
                       })}
                     </tr>
-                  );
+                  )
                 })}
               </tbody>
             </table>
@@ -560,7 +546,76 @@ const resolvedFullName = (() => {
       {!approvalsLoading && (approvals || []).length > 0 && (
         <>
           {(approvals || []).map((group) => {
-            // ... your existing approvals mapping code
+            // Normalize purchaser and try both username and email lookups
+            const purchaser = (group.purchaser || '').toLowerCase()
+            const domainFromMe = (user?.email || '').split('@')[1] || ''
+            const emailGuess = domainFromMe ? `${purchaser}@${domainFromMe}` : ''
+            const u = usersByUsername[purchaser] || usersByEmail[emailGuess] || null
+            const first = (u?.first && u.first.trim()) || firstNameFromUsername(purchaser)
+            const label = `Approve ${first}'s Transactions`
+
+            return (
+              <div key={group.purchaser} style={{ marginTop: 24 }}>
+                <h3 style={{ margin: '8px 0 12px' }}>{label}</h3>
+                <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
+                  <table className="qc-table">
+                    <thead>
+                      <tr>
+                        {(injectedHeaders || []).map((h, i) => (
+                          <th key={`${group.purchaser}-${h}-${i}`} className={thStyle}>
+                            {h === '~OR~' ? '' : h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(group.rows || []).map((r) => {
+                        const id = r['ID']
+                        const e = { ...(approvalsEdits[id] || {}), row: r }
+                        return (
+                          <tr key={id}>
+                            {(injectedHeaders || []).map((h, i) => {
+                              if (h === '~OR~') {
+                                return (
+                                  <td
+                                    key={`or-appr-${id}-${i}`}
+                                    className={tdStyle}
+                                    style={{ textAlign: 'center', fontWeight: 600 }}
+                                  >
+                                    OR
+                                  </td>
+                                )
+                              }
+                              return renderEditableCell('appr', id, h, e, setApprovalsEdits)
+                            })}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })}
+          <div className="qc-actions">
+            <button
+              className="qc-cta"
+              onClick={approveAll}
+              disabled={!allApprovalRowsValid || approving}
+            >
+              {approving ? 'Approving…' : 'Approve'}
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  ) : (
+    // Signed-out landing message
+    <div style={{ padding: '32px 0', color: '#495057', fontSize: 18 }}>
+      Welcome! Sign in with your Google Account using the button above.
+    </div>
+  )}
+</div>
 // Normalize purchaser and try both username and email lookups
 const purchaser = (group.purchaser || '').toLowerCase()
 const domainFromMe = (user?.email || '').split('@')[1] || ''
