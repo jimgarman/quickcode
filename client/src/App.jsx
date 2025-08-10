@@ -445,10 +445,15 @@ const resolvedFullName = (() => {
 <div className="qc-header">
   <div
     className="qc-container"
-    style={{ maxWidth: CONTAINER_MAX, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+    style={{
+      maxWidth: CONTAINER_MAX,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }}
   >
     <h3 style={{ margin: 0, color: '#495057', fontSize: '200%' }}>
-      {user ? `Welcome, ${resolvedFullName}` : 'Welcome,'}
+      {user ? `Welcome, ${resolvedFullName}` : 'Welcome! Sign in with your Google Account'}
     </h3>
 
     <div>
@@ -457,11 +462,10 @@ const resolvedFullName = (() => {
           className="qc-cta"
           onClick={async () => {
             try {
-              await logout();                // firebase signOut
+              await logout(); // firebase signOut
             } catch (e) {
               console.error(e);
             } finally {
-              // ensure UI resets to signed-out state on all browsers
               window.location.reload();
             }
           }}
@@ -475,11 +479,10 @@ const resolvedFullName = (() => {
           className="qc-cta"
           onClick={async () => {
             try {
-              await signIn();                // firebase Google signIn
+              await signIn(); // firebase Google signIn
             } catch (e) {
               console.error(e);
             } finally {
-              // pick up new auth state immediately
               window.location.reload();
             }
           }}
@@ -492,60 +495,72 @@ const resolvedFullName = (() => {
   </div>
 </div>
 
-      <div className="qc-container" style={{ maxWidth: CONTAINER_MAX }}>
-        {/* Your Transactions */}
-        <h3 style={{ marginTop: 8 }}>Your Transactions</h3>
-        {loading && <div>Loading…</div>}
-        {!loading && (rows || []).length === 0 && <div>Good job!  All of your transactions are coded and submitted.</div>}
-        {!loading && (rows || []).length > 0 && (
-          <>
-            <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
-              <table className="qc-table">
-                <thead>
-                  <tr>
-                    {(injectedHeaders || []).map((h, i) => (
-                      <th key={`${h}-${i}`} className={thStyle}>
-                        {h === '~OR~' ? '' : h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(rows || []).map((r) => {
-                    const id = r['ID']
-                    const e = { ...(edits[id] || {}), row: r }
-                    return (
-                      <tr key={id}>
-                        {(injectedHeaders || []).map((h, idx) => {
-                          if (h === '~OR~') {
-                            return <td key={`or-${id}-${idx}`} className={tdStyle} style={{ textAlign: 'center', fontWeight: 600 }}>OR</td>
-                          }
-                          return renderEditableCell('mine', id, h, e, setEdits)
-                        })}
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="qc-actions">
-              <button
-                className="qc-cta"
-                onClick={submitAll}
-                disabled={!allYourRowsValid || submitting}
-              >
-                {submitting ? 'Submitting…' : 'Submit'}
-              </button>
-            </div>
-          </>
-        )}
+<div className="qc-container" style={{ maxWidth: CONTAINER_MAX }}>
+  {user ? (
+    <>
+      {/* Your Transactions */}
+      <h3 style={{ marginTop: 8 }}>Your Transactions</h3>
+      {loading && <div>Loading…</div>}
+      {!loading && (rows || []).length === 0 && (
+        <div>Good job! All of your transactions are coded and submitted.</div>
+      )}
+      {!loading && (rows || []).length > 0 && (
+        <>
+          <div style={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
+            <table className="qc-table">
+              <thead>
+                <tr>
+                  {(injectedHeaders || []).map((h, i) => (
+                    <th key={`${h}-${i}`} className={thStyle}>
+                      {h === '~OR~' ? '' : h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(rows || []).map((r) => {
+                  const id = r['ID'];
+                  const e = { ...(edits[id] || {}), row: r };
+                  return (
+                    <tr key={id}>
+                      {(injectedHeaders || []).map((h, idx) => {
+                        if (h === '~OR~') {
+                          return (
+                            <td
+                              key={`or-${id}-${idx}`}
+                              className={tdStyle}
+                              style={{ textAlign: 'center', fontWeight: 600 }}
+                            >
+                              OR
+                            </td>
+                          );
+                        }
+                        return renderEditableCell('mine', id, h, e, setEdits);
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="qc-actions">
+            <button
+              className="qc-cta"
+              onClick={submitAll}
+              disabled={!allYourRowsValid || submitting}
+            >
+              {submitting ? 'Submitting…' : 'Submit'}
+            </button>
+          </div>
+        </>
+      )}
 
-        {/* Approvals */}
-        <hr style={{ margin: '32px 0', border: 0, borderTop: '1px solid #eee' }} />
-        {/* (2) If no records to approve, show nothing */}
-        {!approvalsLoading && (approvals || []).length > 0 && (
-          <>
-            {(approvals || []).map((group) => {
+      {/* Approvals */}
+      <hr style={{ margin: '32px 0', border: 0, borderTop: '1px solid #eee' }} />
+      {!approvalsLoading && (approvals || []).length > 0 && (
+        <>
+          {(approvals || []).map((group) => {
+            // ... your existing approvals mapping code
 // Normalize purchaser and try both username and email lookups
 const purchaser = (group.purchaser || '').toLowerCase()
 const domainFromMe = (user?.email || '').split('@')[1] || ''
