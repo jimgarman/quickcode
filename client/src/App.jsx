@@ -616,7 +616,7 @@ export default function App() {
         ) : (
           // Signed-out landing message
           <div style={{ padding: '32px 0', color: '#495057', fontSize: 18 }}>
-            Welcome! Sign in with your Google Account using the button above.
+           
           </div>
         )}
       </div>
