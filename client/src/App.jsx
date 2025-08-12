@@ -612,26 +612,22 @@ export default function App() {
                   }}
                 >
                   <table className="qc-table">
-                    <thead>
-                      <tr>
-                        {(injectedHeaders || []).map((h, i) =>
-                          h === "~OR~" ? (
-                            <th key={`sep-${i}`} className={thStyle}></th>
-                          ) : (
-                            <th
-                              key={`${h}-${i}`}
-                              className={`${thStyle} ${
-                                headerHighlight[h]
-                                  ? "qc-th-accent-" + headerHighlight[h]
-                                  : ""
-                              }`}
-                            >
-                              {h}
-                            </th>
-                          )
-                        )}
-                      </tr>
-                    </thead>
+<thead>
+  <tr>
+    {(injectedHeaders || []).map((h, i) =>
+      h === "~OR~" ? (
+        <th key={`sep-${i}`} className={thStyle}></th>
+      ) : (
+        <th
+          key={`${h}-${i}`}
+          className={`${thStyle} ${headerHighlight[h] ? "qc-th-accent-" + headerHighlight[h] : ""}`}
+        >
+          {h === "Division" ? "Overhead" : h}
+        </th>
+      )
+    )}
+  </tr>
+</thead>
                     <tbody>
                       {(rows || []).map((r) => {
                         const id = r["ID"];
@@ -716,29 +712,25 @@ export default function App() {
                         }}
                       >
                         <table className="qc-table">
-                          <thead>
-                            <tr>
-                              {(injectedHeaders || []).map((h, i) =>
-                                h === "~OR~" ? (
-                                  <th
-                                    key={`${group.purchaser}-sep-${i}`}
-                                    className={thStyle}
-                                  ></th>
-                                ) : (
-                                  <th
-                                    key={`${group.purchaser}-${h}-${i}`}
-                                    className={`${thStyle} ${
-                                      headerHighlight[h]
-                                        ? "qc-th-accent-" + headerHighlight[h]
-                                        : ""
-                                    }`}
-                                  >
-                                    {h}
-                                  </th>
-                                )
-                              )}
-                            </tr>
-                          </thead>
+<thead>
+  <tr>
+    {(injectedHeaders || []).map((h, i) =>
+      h === "~OR~" ? (
+        <th
+          key={`${group.purchaser}-sep-${i}`}
+          className={thStyle}
+        ></th>
+      ) : (
+        <th
+          key={`${group.purchaser}-${h}-${i}`}
+          className={`${thStyle} ${headerHighlight[h] ? "qc-th-accent-" + headerHighlight[h] : ""}`}
+        >
+          {h === "Division" ? "Overhead" : h}
+        </th>
+      )
+    )}
+  </tr>
+</thead>
                           <tbody>
                             {(group.rows || []).map((r) => {
                               const id = r["ID"];
