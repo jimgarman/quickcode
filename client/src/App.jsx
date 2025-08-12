@@ -699,7 +699,7 @@ export default function App() {
                   const first =
                     (u?.first && u.first.trim()) ||
                     firstNameFromUsername(purchaser);
-                  const label = `Approve ${first}'s Transactions`;
+                  const label = `${first}'s Transactions`;
 
                   return (
                     <div key={group.purchaser} style={{ marginTop: 24 }}>
