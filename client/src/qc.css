@@ -97,7 +97,7 @@
 /* 2 — Transaction Description */
 .qc-table th:nth-child(2),
 .qc-table td:nth-child(2) {
-  width: 100px;
+  width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -105,7 +105,7 @@
 /* 3 — Amount */
 .qc-table th:nth-child(3),
 .qc-table td:nth-child(3) {
-  width: 95px;
+  width: 80px;
   text-align: right;
 }
 
@@ -118,13 +118,13 @@
 /* 5 — Job ID */
 .qc-table th:nth-child(5),
 .qc-table td:nth-child(5) {
-  width: 120px;
+  width: 110px;
 }
 
 /* 6 — Cost Code */
 .qc-table th:nth-child(6),
 .qc-table td:nth-child(6) {
-  width: 170px;
+  width: 160px;
 }
 
 /* 7 — OR (injected column) */
@@ -138,14 +138,14 @@
 /* 8 — Division */
 .qc-table th:nth-child(8),
 .qc-table td:nth-child(8) {
-  width: 80px;
+  width: 105px;
   text-align: center;
 }
 
 /* 9 — GL Account */
 .qc-table th:nth-child(9),
 .qc-table td:nth-child(9) {
-  width: 220px;
+  width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -185,4 +185,16 @@
 .qc-cta:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Highlight Job ID and Cost Code headers */
+.qc-table th:nth-child(5),
+.qc-table th:nth-child(6) {
+  background-color: #d9f2d9; /* light green */
+}
+
+/* Highlight Division and GL Account headers */
+.qc-table th:nth-child(8),
+.qc-table th:nth-child(9) {
+  background-color: #d9e8f6; /* light blue */
 }
