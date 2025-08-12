@@ -34,3 +34,10 @@ server/dist/
 # Environment files
 client/.env
 server/.env
+
+# Ignore root-level package and manifest files
+/package.json
+/package-lock.json
+/public/manifest.json
+/client/package-lock.json
+/server/package-lock.json
