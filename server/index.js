@@ -8,16 +8,19 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+console.log('GAC =', process.env.GOOGLE_APPLICATION_CREDENTIALS)
+
 const app = express()
 app.use(cors({ origin: true }))
 app.use(express.json())
 
 console.log('Starting QuickCode backend...')
 
-// ---- Firebase Admin
+// ---- Paths (for ESM)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// ---- Firebase Admin
 function loadServiceAccount() {
   const p =
     process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
@@ -50,7 +53,7 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// ---- Sheets helpers
+// ---- Google Sheets helpers
 function colLetter(i) {
   let s = '', n = i + 1
   while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26) }
@@ -61,13 +64,21 @@ function indexHeaders(headers) {
   const map = Object.fromEntries(headers.map((h, i) => [norm(h), i]))
   return { norm, map }
 }
+
 async function getSheetClient() {
+  // Prefer env override, else fall back to server/credentials/service-account.json
+  const keyPath =
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    path.resolve(__dirname, 'credentials', 'service-account.json')
+
   const auth = new google.auth.GoogleAuth({
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    keyFile: keyPath,
   })
   const client = await auth.getClient()
   return google.sheets({ version: 'v4', auth: client })
 }
+
 async function readAllRows(title) {
   const sheets = await getSheetClient()
   const spreadsheetId = process.env.SHEETS_SPREADSHEET_ID
@@ -78,11 +89,14 @@ async function readAllRows(title) {
   })
   return { sheets, spreadsheetId, rows: data.values || [] }
 }
+
 async function updateWholeRow({ sheets, spreadsheetId, title, rowNum1, values }) {
   const lastCol = values.length > 0 ? colLetter(values.length - 1) : 'Z'
   const range = `${title}!A${rowNum1}:${lastCol}${rowNum1}`
   await sheets.spreadsheets.values.update({
-    spreadsheetId, range, valueInputOption: 'RAW',
+    spreadsheetId,
+    range,
+    valueInputOption: 'RAW',
     requestBody: { values: [values] },
   })
 }
@@ -95,7 +109,8 @@ app.get('/sheets/test', async (req, res) => {
     const spreadsheetId = process.env.SHEETS_SPREADSHEET_ID
     const title = process.env.SHEETS_LOG_TITLE || 'Credit Card - Log'
     const { data } = await sheets.spreadsheets.values.get({
-      spreadsheetId, range: `${title}!A1:Z1`,
+      spreadsheetId,
+      range: `${title}!A1:Z1`,
     })
     res.json({ title, headers: data.values?.[0] || [] })
   } catch (e) {
@@ -322,7 +337,7 @@ app.get('/api/lookups', async (req, res) => {
     // --- Users (A: Username, B: First, C: Last, D: Email) ---
     const users = await readTab('Lookup - Users', 'D')
 
-    // Normalize headers and match flexibly (supports: First/First Name, Last/Last Name, Full Name, Name, User, Email, etc.)
+    // Normalize headers and match flexibly
     const norm = s => (s || '').toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '')
     const heads = (users.headers || []).map(norm)
     const findIdx = (...candidates) => {
