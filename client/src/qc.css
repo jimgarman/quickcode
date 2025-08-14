@@ -1,200 +1,356 @@
 /* ================================
    QuickCode UI — Global variables
    ================================ */
-:root {
-  --qc-border:        #cfd4dc;
-  --qc-placeholder:   #9aa0a6;
-  --qc-header-bg:     #f1f3f5;
-  --qc-blue:          #2f6feb;
-  --qc-blue-hover:    #275bd3;
+:root{
+  --qc-border:#cfd4dc;
+  --qc-placeholder:#9aa0a6;
+  --qc-header-bg:#f1f3f5;
+  --qc-blue:#2f6feb;
+  --qc-blue-hover:#275bd3;
+
+  /* Font stack (one place) */
+  --font-stack: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+
+  /* Table column widths (tables with checkbox column) */
+  --col-date:35px;
+  --col-desc:170px;
+  --col-amount:50px;
+  --col-notes:200px;
+  --col-job:98px;
+  --col-cost:120px;
+  --col-or:15px;
+  --col-div:95px;
+  --col-gl:180px;
+
+  /* Split dialog columns */
+  --split-col-desc:42%;
+  --split-col-notes:46%;
+  --split-col-amt:120px;
+  --split-col-del:44px;
 }
 
 /* ================================
    Page header band
    ================================ */
-.qc-header {
-  background: var(--qc-header-bg);
-  padding: 28px 0 20px;
-  margin: -16px 0 16px;
+.qc-header{
+  background:var(--qc-header-bg);
+  padding:28px 0 20px;
+  margin:-16px 0 16px;
 }
 
 /* Main content container */
-.qc-container {
-  max-width: 1375px;
-  margin: 0 auto;
-  padding-left: 30px;   /* ⬅ space from left edge */
-  padding-right: 30px;  /* ⬅ space from right edge */
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+.qc-container{
+  max-width:1375px;
+  margin:0 auto;
+  padding-left:30px;
+  padding-right:30px;
+  font-family:var(--font-stack);
 }
 
 /* ================================
    Form controls
    ================================ */
 .qc-input,
-.qc-select {
-  height: 40px;                 /* matches dropdown height */
-  padding: 6px 10px;            /* compact (reduce whitespace) */
-  box-sizing: border-box;
-  border: 1px solid var(--qc-border);
-  border-radius: 8px;
-  background: #fff;
-  font-size: 14px;
-  max-width: 100%;              /* never overflow cells */
+.qc-select{
+  height:40px;
+  padding:6px 10px;
+  box-sizing:border-box;
+  border:1px solid var(--qc-border);
+  border-radius:8px;
+  background:#fff;
+  font-size:14px;
+  max-width:100%;
 }
-
 .qc-select.placeholder,
-.qc-input::placeholder {
-  color: var(--qc-placeholder);
-}
+.qc-input::placeholder{ color:var(--qc-placeholder); }
 
 /* ================================
-   Table
+   Table: base styles
    ================================ */
-.qc-table {
-  border-collapse: separate;    /* let cells size precisely */
-  border-spacing: 0;            /* no extra gaps between columns/rows */
-  width: 100%;
-  font-size: 14px;
+.qc-table{
+  border-collapse:separate;
+  border-spacing:0;
+  width:100%;
+  font-size:14px;
+  table-layout:fixed; /* predictable widths */
 }
-
-.qc-th {
-  text-align: center;
-  padding: 8px 10px;            /* slightly tighter than default */
-  border-bottom: 1px solid #eee;
-  background: #fafafa;
-  white-space: nowrap;
+.qc-th{
+  text-align:center;
+  padding:8px 10px;
+  border-bottom:1px solid #eee;
+  background:#fafafa;
+  white-space:nowrap;
 }
-
-.qc-td {
-  padding: 8px 10px;            /* controls the visible spacing between columns */
-  border-bottom: 1px solid #f3f3f3;
-  white-space: nowrap;
+.qc-td{
+  padding:8px 10px;
+  border-bottom:1px solid #f3f3f3;
+  white-space:nowrap;
 }
-
-/* Make controls consume the cell width cleanly */
+/* Controls inside cells fill cell */
 .qc-td .qc-input,
-.qc-td .qc-select {
-  width: 100%;
-}
-
-/* Amount column aligns right */
-.qc-amount {
-  text-align: right;
-}
+.qc-td .qc-select{ width:100%; }
+/* Right-align numeric amounts */
+.qc-amount{ text-align:right; }
 
 /* ================================
-   Column width overrides
-   Change the width values to adjust each column independently.
-   nth-child index matches column order in the table.
+   Single source of truth for widths
+   (tables WITH a leading checkbox)
    ================================ */
 
-/* 1 — Date */
-.qc-table th:nth-child(1),
-.qc-table td:nth-child(1) {
-  width: 80px;
+/* 1 — Checkbox */
+.qc-table.qc-has-select th:nth-child(1),
+.qc-table.qc-has-select td:nth-child(1){
+  width:28px;
+  text-align:center;
+}
+/* 2 — Date */
+.qc-table.qc-has-select th:nth-child(2),
+.qc-table.qc-has-select td:nth-child(2){ width:var(--col-date); }
+/* 3 — Transaction Description */
+.qc-table.qc-has-select th:nth-child(3),
+.qc-table.qc-has-select td:nth-child(3){
+  width:var(--col-desc);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+/* 4 — Amount */
+.qc-table.qc-has-select th:nth-child(4),
+.qc-table.qc-has-select td:nth-child(4){
+  width:var(--col-amount);
+  text-align:right;
+}
+/* 5 — Notes */
+.qc-table.qc-has-select th:nth-child(5),
+.qc-table.qc-has-select td:nth-child(5){ width:var(--col-notes); }
+/* 6 — Job ID */
+.qc-table.qc-has-select th:nth-child(6),
+.qc-table.qc-has-select td:nth-child(6){ width:var(--col-job); }
+/* 7 — Cost Code */
+.qc-table.qc-has-select th:nth-child(7),
+.qc-table.qc-has-select td:nth-child(7){ width:var(--col-cost); }
+/* 8 — OR (injected) */
+.qc-table.qc-has-select th:nth-child(8),
+.qc-table.qc-has-select td:nth-child(8){
+  width:var(--col-or);
+  text-align:center;
+  font-weight:600;
+}
+/* 9 — Division / Overhead */
+.qc-table.qc-has-select th:nth-child(9),
+.qc-table.qc-has-select td:nth-child(9){
+  width:var(--col-div);
+  text-align:center;
+}
+/* 10 — GL Account */
+.qc-table.qc-has-select th:nth-child(10),
+.qc-table.qc-has-select td:nth-child(10){
+  width:var(--col-gl);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 
-/* 2 — Transaction Description */
-.qc-table th:nth-child(2),
-.qc-table td:nth-child(2) {
-  width: 90px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Header color accents (unchanged) */
+.qc-table.qc-has-select th:nth-child(7), /* Cost Code */
+.qc-table.qc-has-select th:nth-child(6){ /* Job ID   */
+  background-color:#d9f2d9;
 }
-
-/* 3 — Amount */
-.qc-table th:nth-child(3),
-.qc-table td:nth-child(3) {
-  width: 80px;
-  text-align: right;
-}
-
-/* 4 — Notes */
-.qc-table th:nth-child(4),
-.qc-table td:nth-child(4) {
-  width: 220px;
-}
-
-/* 5 — Job ID */
-.qc-table th:nth-child(5),
-.qc-table td:nth-child(5) {
-  width: 110px;
-}
-
-/* 6 — Cost Code */
-.qc-table th:nth-child(6),
-.qc-table td:nth-child(6) {
-  width: 160px;
-}
-
-/* 7 — OR (injected column) */
-.qc-table th:nth-child(7),
-.qc-table td:nth-child(7) {
-  width: 30px;
-  text-align: center;
-  font-weight: 600;
-}
-
-/* 8 — Division */
-.qc-table th:nth-child(8),
-.qc-table td:nth-child(8) {
-  width: 105px;
-  text-align: center;
-}
-
-/* 9 — GL Account */
-.qc-table th:nth-child(9),
-.qc-table td:nth-child(9) {
-  width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.qc-table.qc-has-select th:nth-child(10),/* GL       */
+.qc-table.qc-has-select th:nth-child(9){  /* Division */
+  background-color:#d6eaff;
 }
 
 /* ================================
    Footer actions (Submit/Approve)
    ================================ */
-.qc-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+.qc-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:16px;
 }
-
-.qc-cta {
-  min-width: 160px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--qc-blue);
-  color: #fff;
-  font-weight: 700;
-  font-size: 18px;
-  border: 0;
-  cursor: pointer;
+.qc-cta{
+  min-width:160px;
+  height:48px;
+  border-radius:12px;
+  background:var(--qc-blue);
+  color:#fff;
+  font-weight:700;
+  font-size:18px;
+  border:0;
+  cursor:pointer;
 }
-.qc-cta:hover {
-  background: var(--qc-blue-hover);
-}
+.qc-cta:hover{ background:var(--qc-blue-hover); }
 
 /* Invalid field highlight */
-.qc-invalid {
-  border-color: #dc3545 !important;           /* red */
-  box-shadow: inset 0 0 0 1px rgba(220,53,69,0.08);
+.qc-invalid{
+  border-color:#dc3545 !important;
+  box-shadow:inset 0 0 0 1px rgba(220,53,69,0.08);
 }
-
 /* Disabled CTA state */
-.qc-cta:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.qc-cta:disabled{ opacity:.55; cursor:not-allowed; }
+
+/* ================================
+   Actions bar + menu (UI-only)
+   ================================ */
+.qc-actionsbar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  margin:8px 0 6px;
+}
+.qc-menu-btn{
+  height:36px;
+  padding:0 12px;
+  border-radius:8px;
+  border:1px solid var(--qc-border);
+  background:#fff;
+  cursor:pointer;
+  font-weight:600;
+}
+.qc-menu{
+  position:absolute;
+  z-index:1000;
+  margin-top:4px;
+  min-width:100px;
+  border:1px solid var(--qc-border);
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 6px 24px rgba(0,0,0,.08);
+}
+.qc-menu ul{ list-style:none; margin:0; padding:6px; }
+.qc-menu li{ margin:0; }
+.qc-menu button{
+  width:100%;
+  text-align:left;
+  background:transparent;
+  border:0;
+  padding:10px 12px;
+  cursor:pointer;
+}
+.qc-menu button:hover{ background:#f6f8fa; }
+
+/* ================================
+   Modal dialog for Split
+   ================================ */
+.qc-modal{
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:60px 24px;
+  background:rgba(0,0,0,0.35);
+}
+/* Make the dialog use the same font as the app */
+.qc-dialog{
+  width:100%;
+  max-width:850px;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 18px 60px rgba(0,0,0,.25);
+  overflow:hidden;
+  font-family:var(--font-stack);
+}
+/* …and force everything inside to inherit it */
+.qc-dialog *{ font-family:inherit !important; }
+
+.qc-dialog-hd{
+  background:#eee;
+  padding:24px 30px;
+  font-size:24px;
+  font-weight:700;
+  color:#212529;
+}
+.qc-dialog-body{ padding:27px 30px 12px; }
+
+.qc-dialog-ft{
+  display:flex;
+  justify-content:flex-end;
+  gap:16px;                   /* extra space between buttons */
+  padding:18px 20px 22px;
+  border-top:1px solid #f0f0f0;
+}
+.qc-btn{
+  height:40px;
+  padding:0 16px;
+  border-radius:10px;
+  border:1px solid var(--qc-border);
+  background:#fff;
+  cursor:pointer;
+  font-weight:600;
+}
+.qc-btn-primary{
+  background:var(--qc-blue);
+  border-color:var(--qc-blue);
+  color:#fff;
+}
+.qc-btn-primary:hover{ background:var(--qc-blue-hover); }
+.qc-btn:disabled,
+.qc-btn-primary:disabled{ opacity:.6; cursor:not-allowed; }
+
+/* === Split grid layout === */
+.qc-split-grid{
+  width:100%;
+  table-layout:fixed;
+  border-collapse:collapse;
+  margin-top:6px;
+}
+.qc-split-grid th,
+.qc-split-grid td{ padding:12px 8px; }
+.qc-split-grid th{ text-align:center; font-weight:700; }
+.qc-split-row-desc{ text-align:left; }
+.qc-split-row-amt{ text-align:right; }
+
+/* Column widths (driven by vars above) */
+.qc-split-grid col.col-desc { width:var(--split-col-desc); }
+.qc-split-grid col.col-notes{ width:var(--split-col-notes); }
+.qc-split-grid col.col-amt  { width:var(--split-col-amt); }
+.qc-split-grid col.col-del  { width:var(--split-col-del); }
+
+/* Make inputs fill the Notes cell completely */
+.qc-split-grid .qc-input{ width:100%; display:block; }
+.qc-split-row-notes .qc-input{ width:100% !important; }
+
+/* Amount input right-aligned like the table */
+.qc-amount-input{ text-align:right; }
+
+.qc-add-row{
+  margin:10px 0 0 8px;
+  cursor:pointer;
+  font-style:italic;
+  color:#1f6feb;
+  user-select:none;
 }
 
-/* Highlight Job ID and Cost Code headers */
-.qc-table th:nth-child(5),
-.qc-table th:nth-child(6) {
-  background-color: #d9f2d9; /* light green */
+/* Remove (trash) button */
+.qc-row-remove{
+  background:none;
+  border:none;
+  color:#6c757d;
+  cursor:pointer;
+  padding:4px 6px;
+  border-radius:6px;
+  line-height:0;
 }
+.qc-row-remove:hover{ background:#f3f4f6; color:#343a40; }
+.qc-row-remove svg{ width:18px; height:18px; display:block; }
 
-/* Highlight Division and GL Account headers */
-.qc-table th:nth-child(8),
-.qc-table th:nth-child(9) {
-  background-color: #d6eaff; /* light blue */
+/* === Split summary aligned under Amount column === */
+.qc-split-summary-grid{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  justify-items:end;
+  gap:10px 32px;
+  margin:8px 0 0 0;
+  font-size:18px;
 }
+.qc-split-summary-grid .label{ font-weight:500; }
+.qc-split-summary-grid .value{
+  min-width:120px;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.qc-split-summary-grid .strong{ font-weight:700; }

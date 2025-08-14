@@ -1,3 +1,4 @@
+// ===== START: Imports and Constants =====
 import "./qc.css";
 import React, { useEffect, useMemo, useState } from "react";
 import { onAuth, signIn, logout, auth } from "./auth/firebase";
@@ -5,8 +6,64 @@ import { onAuth, signIn, logout, auth } from "./auth/firebase";
 const allowedDomain = (import.meta.env.VITE_ALLOWED_DOMAIN || "").toLowerCase();
 const HIDE_COLUMNS = new Set(["ID", "User Name", "Status", "Approver"]);
 const CONTAINER_MAX = 1375;
+// ===== END: Imports and Constants =====
 
-// Google-sheet style date → MM/DD/YYYY
+
+
+// ===== START: ActionsMenu Component =====
+/** Actions menu (UI-only) */
+function ActionsMenu({ disabled, onSplit, onBackcharge }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <button
+        className="qc-menu-btn"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        Actions ▾
+      </button>
+      {open && (
+        <div className="qc-menu" role="menu" aria-label="Actions">
+          <ul>
+            <li>
+              <button role="menuitem" onClick={() => { setOpen(false); onSplit?.(); }}>
+                Split
+              </button>
+            </li>
+            {/* Backcharge temporarily removed per request */}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+// ===== END: ActionsMenu Component =====
+
+
+
+// ===== START: Split/Currency Helpers =====
+/* ---------- Helpers for Split dialog ---------- */
+function toCents(input) {
+  if (input == null) return 0;
+  const s = String(input).replace(/[^0-9.-]/g, "");
+  if (!s) return 0;
+  const n = Number.parseFloat(s);
+  if (Number.isNaN(n)) return 0;
+  return Math.round(n * 100);
+}
+function centsToUSD(cents) {
+  const v = (cents || 0) / 100;
+  return v.toLocaleString(undefined, { style: "currency", currency: "USD" });
+}
+// ===== END: Split/Currency Helpers =====
+
+
+
+// ===== START: Formatting Helpers =====
+/* Google-sheet style date → MM/DD (UI only; backend unchanged) */
 function fmtCell(header, value) {
   if (header === "Date") {
     const v = (value ?? "").toString().trim();
@@ -22,12 +79,238 @@ function fmtCell(header, value) {
     if (Number.isNaN(d.getTime())) return v;
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
+    return `${mm}/${dd}`;
   }
   return value ?? "";
 }
+// ===== END: Formatting Helpers =====
 
+
+
+/* ===== START: Currency Display Formatter (NEW) =====
+   Purpose: Ensure all "Amount" cells display as localized USD currency,
+   regardless of whether the raw value is a number ("30", 30, 30.0) or
+   a string ("$30.00"). Uses toCents for normalization. */
+function fmtCurrencyDisplay(value) {
+  const cents = toCents(value);
+  return (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
+}
+/* ===== END: Currency Display Formatter (NEW) ===== */
+
+
+
+// ===== START: Currency Input Sanitizers =====
+/** UI-only Split dialog */
+function sanitizeCurrencyInput(raw) {
+  const s = String(raw ?? "").replace(/[^0-9.]/g, "");
+  const parts = s.split(".");
+  if (parts.length > 2) return parts[0] + "." + parts.slice(1).join("");
+  return s;
+}
+function prettyCurrency(raw) {
+  const cents = toCents(raw);
+  return (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
+}
+// ===== END: Currency Input Sanitizers =====
+
+
+
+// ===== START: SplitDialog Component =====
+function SplitDialog({ row, onCancel, onConfirm, /* ===== NEW PROP ===== */ busy = false /* used to show "Processing…" and disable Confirm */ }) {
+  if (!row) return null;
+
+  const originalDesc =
+    row["Transaction Description"] ?? row["Transcation Description"] ?? "";
+  const originalAmountCents = toCents(row["Amount"]);
+
+  const [lines, setLines] = useState([
+    { notes: "", amount: "" },
+    { notes: "", amount: "" },
+  ]);
+
+  const addLine = () => setLines((prev) => [...prev, { notes: "", amount: "" }]);
+  const removeLine = (idx) => setLines((prev) => prev.filter((_, i) => i !== idx));
+
+  const onAmountChange = (i, raw) => {
+    const sanitized = sanitizeCurrencyInput(raw);
+    setLines((prev) => {
+      const next = [...prev];
+      next[i] = { ...next[i], amount: sanitized };
+      return next;
+    });
+  };
+  const onAmountBlur = (i) => {
+    setLines((prev) => {
+      const next = [...prev];
+      next[i] = { ...next[i], amount: prettyCurrency(next[i].amount) };
+      return next;
+    });
+  };
+  const onAmountFocus = (i) => {
+    setLines((prev) => {
+      const next = [...prev];
+      next[i] = { ...next[i], amount: sanitizeCurrencyInput(next[i].amount) };
+      return next;
+    });
+  };
+
+  const splitTotalCents = lines.reduce((sum, l) => sum + toCents(l.amount), 0);
+  const allFilled = lines.every((l) => toCents(l.amount) > 0);
+  const canConfirm = allFilled && splitTotalCents === originalAmountCents;
+
+  return (
+    <div className="qc-modal" role="dialog" aria-modal="true">
+      <div className="qc-dialog">
+        <div className="qc-dialog-hd">Split Transaction</div>
+
+        <div className="qc-dialog-body">
+          <table className="qc-split-grid">
+            {/* These columns map to CSS vars in qc.css so widths are easy to adjust */}
+            <colgroup>
+              <col className="col-desc" />
+              <col className="col-notes" />
+              <col className="col-amt" />
+              <col className="col-del" />
+            </colgroup>
+
+            <thead>
+              <tr>
+                <th className="qc-split-row-desc">Transaction Description - New</th>
+                <th className="qc-split-row-notes">Notes</th>
+                <th className="qc-split-row-amt">Amount</th>
+                <th className="qc-split-row-del"></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {lines.map((l, i) => (
+                <tr key={i}>
+                  <td className="qc-split-row-desc">
+                    {`${originalDesc} #${i + 1}`}
+                  </td>
+
+                  <td className="qc-split-row-notes">
+                    <input
+                      className="qc-input"
+                      value={l.notes}
+                      onChange={(e) =>
+                        setLines((prev) => {
+                          const next = [...prev];
+                          next[i] = { ...next[i], notes: e.target.value };
+                          return next;
+                        })
+                      }
+                      disabled={busy}
+                    />
+                  </td>
+
+                  <td className="qc-split-row-amt">
+                    <input
+                      className="qc-input qc-amount-input"
+                      inputMode="decimal"
+                      placeholder="$0.00"
+                      value={l.amount}
+                      onChange={(e) => onAmountChange(i, e.target.value)}
+                      onBlur={() => onAmountBlur(i)}
+                      onFocus={() => onAmountFocus(i)}
+                      disabled={busy}
+                    />
+                  </td>
+
+                  <td className="qc-split-row-del">
+                    {i >= 2 && (
+                      <button
+                        type="button"
+                        className="qc-row-remove"
+                        title="Remove line"
+                        aria-label={`Remove Split #${i + 1}`}
+                        onClick={() => removeLine(i)}
+                        disabled={busy}
+                      >
+                        {/* Trash can icon */}
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path
+                            d="M9 3h6a1 1 0 0 1 1 1v1h4v2h-1.1l-1.1 12.1A2 2 0 0 1 15.8 22H8.2a2 2 0 0 1-1.99-1.89L5.1 7H4V5h4V4a1 1 0 0 1 1-1Zm1 2h4V4h-4v1Zm-1.9 2 1 11h7.8l1-11H8.1ZM10 9h2v8h-2V9Zm4 0h2v8h-2V9Z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="qc-add-row" onClick={addLine} role="button" tabIndex={0}>
+            + Add
+          </div>
+
+          {/* Summary aligned far right under Amount column */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+            <table>
+              <tbody>
+                <tr>
+                  <td style={{ paddingRight: 32, fontWeight: "bold", textAlign: "right" }}>Split Total:</td>
+                  <td style={{ textAlign: "right", fontWeight: "bold" }}>
+                    {(splitTotalCents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" })}
+                  </td>
+                </tr>
+                <tr>
+  <td colSpan="2" style={{ height: "8px" }}></td>
+</tr>
+                <tr>
+                  <td style={{ paddingRight: 32, textAlign: "right" }}>Original:</td>
+                  <td style={{ textAlign: "right" }}>
+                    {(originalAmountCents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" })}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ paddingRight: 32, textAlign: "right" }}>Difference:</td>
+                  <td style={{ textAlign: "right" }}>
+                    {((splitTotalCents - originalAmountCents) / 100).toLocaleString(undefined, { style: "currency", currency: "USD" })}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Footer: buttons on the RIGHT */}
+        <div className="qc-dialog-ft">
+<button
+  className="qc-btn"
+  style={{ marginRight: "16px" }} // adjust px as needed
+  onClick={onCancel}
+  disabled={busy}
+>
+  Cancel
+</button>
+          <button
+            className="qc-btn qc-btn-primary"
+            onClick={() => {
+              const payload = lines.map((l, i) => ({
+                description: `${originalDesc} - Split #${i + 1}`,
+                notes: (l.notes || "").trim(),
+                amountCents: toCents(l.amount),
+              }));
+              onConfirm?.(payload);
+            }}
+            disabled={!canConfirm || busy}
+            title={!canConfirm ? "Split amounts must total the original amount" : "Confirm split"}
+          >
+            {busy ? "Processing…" : "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ===== END: SplitDialog Component =====
+
+
+
+// ===== START: Name/Sorting/Validation/Division Helpers =====
 // Fallback first-name from username
 function firstNameFromUsername(u) {
   if (!u) return "User";
@@ -73,8 +356,13 @@ const DIVISION_CODE_TO_LABEL = {
   "10-01": "Raleigh",
   "10-99": "Corporate",
 };
+// ===== END: Name/Sorting/Validation/Division Helpers =====
 
+
+
+// ===== START: Main App Component =====
 export default function App() {
+  // ===== START: State =====
   const [user, setUser] = useState(null);
   const [deny, setDeny] = useState("");
   const [err, setErr] = useState("");
@@ -102,6 +390,23 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [approving, setApproving] = useState(false);
 
+  // selection state
+  const [selectedMine, setSelectedMine] = useState(() => new Set());
+  const [selectedByGroup, setSelectedByGroup] = useState({}); // { purchaser: Set(ids) }
+
+  // split dialog state
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [splitCtx, setSplitCtx] = useState(null); // { scope: 'mine'|'appr', purchaser?, row }
+
+  /* ===== START: Split processing state (NEW) =====
+     Drives the "Processing…" UI and disables Confirm while the split request runs. */
+  const [splitting, setSplitting] = useState(false);
+  /* ===== END: Split processing state (NEW) ===== */
+  // ===== END: State =====
+
+
+
+  // ===== START: Auth Effect =====
   useEffect(() => {
     return onAuth(async (u) => {
       if (!u) {
@@ -120,7 +425,11 @@ export default function App() {
       setUser({ displayName: u.displayName ?? email, email });
     });
   }, []);
+  // ===== END: Auth Effect =====
 
+
+
+  // ===== START: Lookup Data Effect =====
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -141,7 +450,11 @@ export default function App() {
       }
     })();
   }, [user]);
+  // ===== END: Lookup Data Effect =====
 
+
+
+  // ===== START: Fetch "Your Transactions" Effect =====
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -179,7 +492,11 @@ export default function App() {
       }
     })();
   }, [user]);
+  // ===== END: Fetch "Your Transactions" Effect =====
 
+
+
+  // ===== START: Fetch Approvals Effect =====
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -230,7 +547,11 @@ export default function App() {
       }
     })();
   }, [user]);
+  // ===== END: Fetch Approvals Effect =====
 
+
+
+  // ===== START: Utilities, Memo, and Actions =====
   const refresh = () => window.location.reload();
 
   const visibleHeadersBase = useMemo(
@@ -248,7 +569,7 @@ export default function App() {
     return arr;
   }, [visibleHeadersBase]);
 
-  // header accent classes
+  // header accent classes (CSS may style nth-child; class kept for future use)
   const headerHighlight = {
     "Job ID": "job",
     "Cost Code": "cost",
@@ -505,8 +826,12 @@ export default function App() {
       );
     }
 
-    const display =
-      h === "Date" ? fmtCell("Date", e.row[h]) : e.row[h] ?? "";
+    // Format "Date" and "Amount" specially; other cells pass-through
+    let display =
+      h === "Date" ? fmtCell("Date", e.row[h]) :
+      h === "Amount" ? fmtCurrencyDisplay(e.row[h]) :
+      (e.row[h] ?? "");
+
     const align = h === "Amount" ? "right" : "left";
     return (
       <td
@@ -532,9 +857,106 @@ export default function App() {
     );
   }, [approvals, approvalsEdits]);
 
+  // selection helpers
+  const yourAllIds = (rows || []).map((r) => String(r["ID"]));
+  function yourToggleOne(id) {
+    setSelectedMine((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+
+  function groupGetSet(purchaser) {
+    const s = selectedByGroup[purchaser];
+    return s instanceof Set ? s : new Set();
+  }
+  function groupAllIds(group) {
+    return (group.rows || []).map((r) => String(r["ID"]));
+  }
+  function groupAnySelected(group) {
+    return groupGetSet(group.purchaser).size > 0;
+  }
+  function groupToggleOne(group, id) {
+    setSelectedByGroup((prev) => {
+      const copy = { ...prev };
+      const cur = groupGetSet(group.purchaser);
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      copy[group.purchaser] = next;
+      return copy;
+    });
+  }
+  // ===== END: Utilities, Memo, and Actions =====
+
+
+
+  // ===== START: Split Dialog Element Wrapper =====
+  // --- Split dialog element (avoid JSX nesting issues) ---
+  const splitDialogEl = (splitOpen && splitCtx?.row) ? (
+    <SplitDialog
+      row={splitCtx.row}
+      onCancel={() => setSplitOpen(false)}
+      /* pass busy state into dialog */
+      busy={splitting}
+      onConfirm={async (children) => {
+        try {
+          setSplitting(true);
+          const t = await auth.currentUser?.getIdToken();
+          if (!t) {
+            alert("Could not get auth token. Please sign in again.");
+            return;
+          }
+
+          // Transform UI children -> backend "splits"
+          const splits = (children || []).map((c) => ({
+            amount: typeof c.amountCents === "number" ? c.amountCents / 100 : 0,
+            notes: c.notes || "",
+            // jobId/costCode/division/glAccount optional
+          }));
+
+          const parentId = String(splitCtx.row["ID"]);
+
+          const res = await fetch(
+            `${import.meta.env.VITE_API_BASE}/api/log/split?dryRun=false&assignIds=true`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${t}`,
+              },
+              body: JSON.stringify({ parentId, splits }),
+            }
+          );
+
+          const json = await res.json().catch(() => ({}));
+          console.log("SPLIT RESP", res.status, json);
+
+          if (!res.ok) {
+            alert(json?.errors?.[0] || json?.error || "Split failed");
+            return;
+          }
+
+          // Success — reload to show new split rows
+          refresh();
+        } catch (e) {
+          console.error(e);
+          alert("Network error while splitting");
+        } finally {
+          setSplitting(false);
+          setSplitOpen(false);
+        }
+      }}
+    />
+  ) : null;
+  // ===== END: Split Dialog Element Wrapper =====
+
+
+
+  // ===== START: Render =====
   return (
     <>
-      {/* Header band */}
+      {/* ===== START: Header Band ===== */}
       <div className="qc-header">
         <div
           className="qc-container"
@@ -589,13 +1011,37 @@ export default function App() {
           </div>
         </div>
       </div>
+      {/* ===== END: Header Band ===== */}
 
-      {/* Main container */}
+      {/* ===== START: Main Container ===== */}
       <div className="qc-container" style={{ maxWidth: CONTAINER_MAX }}>
         {user ? (
           <>
-            {/* Your Transactions */}
-            <h3 style={{ marginTop: 8 }}>Your Transactions</h3>
+            {/* ===== START: Your Transactions Section ===== */}
+            <div className="qc-actionsbar" style={{ marginTop: 8 }}>
+              <h3 style={{ margin: 0 }}>Your Transactions</h3>
+              <ActionsMenu
+                disabled={selectedMine.size === 0}
+                onSplit={() => {
+                  const ids = Array.from(selectedMine);
+                  if (ids.length !== 1) {
+                    alert("Select exactly one transaction to split.");
+                    return;
+                  }
+                  const row = (rows || []).find((r) => String(r["ID"]) === ids[0]);
+                  if (!row) {
+                    alert("Could not find the selected transaction.");
+                    return;
+                  }
+                  setSplitCtx({ scope: "mine", row });
+                  setSplitOpen(true);
+                }}
+                onBackcharge={() =>
+                  console.log("Backcharge (Your Tx):", Array.from(selectedMine))
+                }
+              />
+            </div>
+
             {loading && <div>Loading…</div>}
             {!loading && (rows || []).length === 0 && (
               <div>
@@ -611,51 +1057,53 @@ export default function App() {
                     borderRadius: 8,
                   }}
                 >
-                  <table className="qc-table">
-<thead>
-  <tr>
-    {(injectedHeaders || []).map((h, i) =>
-      h === "~OR~" ? (
-        <th key={`sep-${i}`} className={thStyle}></th>
-      ) : (
-        <th
-          key={`${h}-${i}`}
-          className={`${thStyle} ${headerHighlight[h] ? "qc-th-accent-" + headerHighlight[h] : ""}`}
-        >
-          {h === "Division" ? "Overhead" : h}
-        </th>
-      )
-    )}
-  </tr>
-</thead>
+                  <table className="qc-table qc-has-select">
+                    <thead>
+                      <tr>
+                        {/* No Select-All in header per request */}
+                        <th className={thStyle}></th>
+                        {(injectedHeaders || []).map((h, i) =>
+                          h === "~OR~" ? (
+                            <th key={`sep-${i}`} className={thStyle}></th>
+                          ) : (
+                            <th
+                              key={`${h}-${i}`}
+                              className={`${thStyle} ${headerHighlight[h] ? "qc-th-accent-" + headerHighlight[h] : ""}`}
+                            >
+                              {h === "Division" ? "Overhead" : h}
+                            </th>
+                          )
+                        )}
+                      </tr>
+                    </thead>
                     <tbody>
                       {(rows || []).map((r) => {
-                        const id = r["ID"];
+                        const id = String(r["ID"]);
+                        const checked = selectedMine.has(id);
                         const e = { ...(edits[id] || {}), row: r };
                         return (
                           <tr key={id}>
+                            <td className={tdStyle} style={{ textAlign: "center" }}>
+                              <input
+                                type="checkbox"
+                                aria-label={`Select row ${id}`}
+                                checked={checked}
+                                onChange={() => yourToggleOne(id)}
+                              />
+                            </td>
                             {(injectedHeaders || []).map((h, idx) => {
                               if (h === "~OR~") {
                                 return (
                                   <td
                                     key={`or-${id}-${idx}`}
                                     className={tdStyle}
-                                    style={{
-                                      textAlign: "center",
-                                      fontWeight: 600,
-                                    }}
+                                    style={{ textAlign: "center", fontWeight: 600 }}
                                   >
                                     OR
                                   </td>
                                 );
                               }
-                              return renderEditableCell(
-                                "mine",
-                                id,
-                                h,
-                                e,
-                                setEdits
-                              );
+                              return renderEditableCell("mine", id, h, e, setEdits);
                             })}
                           </tr>
                         );
@@ -674,7 +1122,9 @@ export default function App() {
                 </div>
               </>
             )}
+            {/* ===== END: Your Transactions Section ===== */}
 
+            {/* ===== START: Approvals Section ===== */}
             {/* Approvals */}
             <hr
               style={{
@@ -701,9 +1151,37 @@ export default function App() {
                     firstNameFromUsername(purchaser);
                   const label = `${first}'s Transactions`;
 
+                  const gSelSet = groupGetSet(group.purchaser);
+                  const gAnySel = groupAnySelected(group);
+
                   return (
                     <div key={group.purchaser} style={{ marginTop: 24 }}>
-                      <h3 style={{ margin: "8px 0 12px" }}>{label}</h3>
+                      <div className="qc-actionsbar" style={{ margin: "8px 0 12px" }}>
+                        <h3 style={{ margin: 0 }}>{label}</h3>
+                        <ActionsMenu
+                          disabled={!gAnySel}
+                          onSplit={() => {
+                            const ids = Array.from(gSelSet);
+                            if (ids.length !== 1) {
+                              alert("Select exactly one transaction to split.");
+                              return;
+                            }
+                            const row = (group.rows || []).find(
+                              (r) => String(r["ID"]) === ids[0]
+                            );
+                            if (!row) {
+                              alert("Could not find the selected transaction.");
+                              return;
+                            }
+                            setSplitCtx({ scope: "appr", purchaser: group.purchaser, row });
+                            setSplitOpen(true);
+                          }}
+                          onBackcharge={() =>
+                            console.log("Backcharge (Approvals):", group.purchaser, Array.from(gSelSet))
+                          }
+                        />
+                      </div>
+
                       <div
                         style={{
                           overflowX: "auto",
@@ -711,45 +1189,53 @@ export default function App() {
                           borderRadius: 8,
                         }}
                       >
-                        <table className="qc-table">
-<thead>
-  <tr>
-    {(injectedHeaders || []).map((h, i) =>
-      h === "~OR~" ? (
-        <th
-          key={`${group.purchaser}-sep-${i}`}
-          className={thStyle}
-        ></th>
-      ) : (
-        <th
-          key={`${group.purchaser}-${h}-${i}`}
-          className={`${thStyle} ${headerHighlight[h] ? "qc-th-accent-" + headerHighlight[h] : ""}`}
-        >
-          {h === "Division" ? "Overhead" : h}
-        </th>
-      )
-    )}
-  </tr>
-</thead>
+                        <table className="qc-table qc-has-select">
+                          <thead>
+                            <tr>
+                              {/* No Select-All in header per request */}
+                              <th className={thStyle}></th>
+                              {(injectedHeaders || []).map((h, i) =>
+                                h === "~OR~" ? (
+                                  <th
+                                    key={`${group.purchaser}-sep-${i}`}
+                                    className={thStyle}
+                                  ></th>
+                                ) : (
+                                  <th
+                                    key={`${group.purchaser}-${h}-${i}`}
+                                    className={`${thStyle} ${headerHighlight[h] ? "qc-th-accent-" + headerHighlight[h] : ""}`}
+                                  >
+                                    {h === "Division" ? "Overhead" : h}
+                                  </th>
+                                )
+                              )}
+                            </tr>
+                          </thead>
                           <tbody>
                             {(group.rows || []).map((r) => {
-                              const id = r["ID"];
+                              const id = String(r["ID"]);
+                              const checked = groupGetSet(group.purchaser).has(id);
                               const e = {
                                 ...(approvalsEdits[id] || {}),
                                 row: r,
                               };
                               return (
                                 <tr key={id}>
+                                  <td className={tdStyle} style={{ textAlign: "center" }}>
+                                    <input
+                                      type="checkbox"
+                                      aria-label={`Select row ${id} for ${group.purchaser}`}
+                                      checked={checked}
+                                      onChange={() => groupToggleOne(group, id)}
+                                    />
+                                  </td>
                                   {(injectedHeaders || []).map((h, i) => {
                                     if (h === "~OR~") {
                                       return (
                                         <td
                                           key={`or-appr-${id}-${i}`}
                                           className={tdStyle}
-                                          style={{
-                                            textAlign: "center",
-                                            fontWeight: 600,
-                                          }}
+                                          style={{ textAlign: "center", fontWeight: 600 }}
                                         >
                                           OR
                                         </td>
@@ -783,14 +1269,83 @@ export default function App() {
                 </div>
               </>
             )}
+            {/* ===== END: Approvals Section ===== */}
           </>
         ) : (
-          // Signed-out landing message
-          <div style={{ padding: "32px 0", color: "#495057", fontSize: 18 }}>
-            Welcome! Sign in with your Google Account using the button above.
-          </div>
+          <>
+            {/* ===== START: Signed-out Landing ===== */}
+            {/* Signed-out landing message */}
+            <div style={{ padding: "32px 0", color: "#495057", fontSize: 18 }}>
+              Welcome! Sign in with your Google Account using the button above.
+            </div>
+            {/* ===== END: Signed-out Landing ===== */}
+          </>
         )}
       </div>
+      {/* ===== END: Main Container ===== */}
+
+      {/* ===== START: Bottom Split Dialog Mount (UI only) ===== */}
+      {/* Split dialog (UI only) */}
+      {splitOpen && splitCtx?.row && (
+        <SplitDialog
+          row={splitCtx.row}
+          onCancel={() => setSplitOpen(false)}
+          /* pass busy state into dialog */
+          busy={splitting}
+          onConfirm={async (children) => {
+            try {
+              setSplitting(true);
+              const t = await auth.currentUser?.getIdToken();
+              if (!t) {
+                alert("Could not get auth token. Please sign in again.");
+                return;
+              }
+
+              // Transform UI children -> backend "splits"
+              const splits = (children || []).map((c) => ({
+                amount:
+                  typeof c.amountCents === "number" ? c.amountCents / 100 : 0,
+                notes: c.notes || "",
+                // jobId/costCode/division/glAccount optional
+              }));
+
+              const parentId = String(splitCtx.row["ID"]);
+
+              const res = await fetch(
+                `${import.meta.env.VITE_API_BASE}/api/log/split?dryRun=false&assignIds=true`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${t}`,
+                  },
+                  body: JSON.stringify({ parentId, splits }),
+                }
+              );
+
+              const json = await res.json().catch(() => ({}));
+              console.log("SPLIT RESP", res.status, json);
+
+              if (!res.ok) {
+                alert(json?.errors?.[0] || json?.error || "Split failed");
+                return;
+              }
+
+              // Success — reload to show new split rows
+              refresh();
+            } catch (e) {
+              console.error(e);
+              alert("Network error while splitting");
+            } finally {
+              setSplitting(false);
+              setSplitOpen(false);
+            }
+          }}
+        />
+      )}
+      {/* ===== END: Bottom Split Dialog Mount (UI only) ===== */}
     </>
   );
+  // ===== END: Render =====
 }
+// ===== END: Main App Component =====
