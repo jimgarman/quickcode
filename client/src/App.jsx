@@ -1,4 +1,4 @@
-// ===== START: Imports and Constants =====
+// ===== START: Imports and Constants SplitNoRefresh=====
 import "./qc.css";
 import React, { useEffect, useMemo, useState } from "react";
 import { onAuth, signIn, logout, auth } from "./auth/firebase";
@@ -892,63 +892,8 @@ export default function App() {
 
 
   // ===== START: Split Dialog Element Wrapper =====
-  // --- Split dialog element (avoid JSX nesting issues) ---
-  const splitDialogEl = (splitOpen && splitCtx?.row) ? (
-    <SplitDialog
-      row={splitCtx.row}
-      onCancel={() => setSplitOpen(false)}
-      /* pass busy state into dialog */
-      busy={splitting}
-      onConfirm={async (children) => {
-        try {
-          setSplitting(true);
-          const t = await auth.currentUser?.getIdToken();
-          if (!t) {
-            alert("Could not get auth token. Please sign in again.");
-            return;
-          }
-
-          // Transform UI children -> backend "splits"
-          const splits = (children || []).map((c) => ({
-            amount: typeof c.amountCents === "number" ? c.amountCents / 100 : 0,
-            notes: c.notes || "",
-            // jobId/costCode/division/glAccount optional
-          }));
-
-          const parentId = String(splitCtx.row["ID"]);
-
-          const res = await fetch(
-            `${import.meta.env.VITE_API_BASE}/api/log/split?dryRun=false&assignIds=true`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${t}`,
-              },
-              body: JSON.stringify({ parentId, splits }),
-            }
-          );
-
-          const json = await res.json().catch(() => ({}));
-          console.log("SPLIT RESP", res.status, json);
-
-          if (!res.ok) {
-            alert(json?.errors?.[0] || json?.error || "Split failed");
-            return;
-          }
-
-          // Success — reload to show new split rows
-          refresh();
-        } catch (e) {
-          console.error(e);
-          alert("Network error while splitting");
-        } finally {
-          setSplitting(false);
-          setSplitOpen(false);
-        }
-      }}
-    />
-  ) : null;
+  // --- Removed per plan: wrapper SplitDialog element previously defined here caused duplication/drift.
+  //     The bottom mounted SplitDialog remains the single source of truth.
   // ===== END: Split Dialog Element Wrapper =====
 
 
@@ -1301,12 +1246,31 @@ export default function App() {
                 return;
               }
 
+              // ******************************************************************
+              // ************** START: Split POST + single re-fetch (NEW) *********
+              //  - Send explicit blanks for coding fields so children do NOT
+              //    inherit Job/Cost/GL/Division.
+              //  - After success, re-fetch the relevant list (no full reload),
+              //    re-seed edits, and clear the appropriate selection.
+              // ******************************************************************
+
+              // ===================== START NEW: SNAPSHOT DRAFTS ==================
+              // Capture current unsaved edits so we can restore them after re-fetch.
+              // We skip restoring the parent row (it will be marked Split/removed).
+              const prevEdits = { ...edits };
+              const prevApprEdits = { ...approvalsEdits };
+              // ====================== END NEW: SNAPSHOT DRAFTS ===================
+
               // Transform UI children -> backend "splits"
               const splits = (children || []).map((c) => ({
                 amount:
                   typeof c.amountCents === "number" ? c.amountCents / 100 : 0,
                 notes: c.notes || "",
-                // jobId/costCode/division/glAccount optional
+                // Explicit blanks to prevent inheritance of coding fields
+                jobId: "",
+                costCode: "",
+                division: "",
+                glAccount: "",
               }));
 
               const parentId = String(splitCtx.row["ID"]);
@@ -1331,8 +1295,109 @@ export default function App() {
                 return;
               }
 
-              // Success — reload to show new split rows
-              refresh();
+              // Branch by scope: re-fetch the appropriate data set
+              if (splitCtx?.scope === "mine") {
+                // Re-fetch "Your Transactions"
+                const token = await auth.currentUser?.getIdToken();
+                const res2 = await fetch(
+                  `${import.meta.env.VITE_API_BASE}/api/log/new`,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                const j2 = await res2.json();
+                if (!res2.ok) {
+                  alert(j2.error || "Reload failed");
+                } else {
+                  setHeaders(Array.isArray(j2.headers) ? j2.headers : []);
+                  const r = Array.isArray(j2.rows) ? j2.rows : [];
+                  const sorted = sortByTxn(r);
+                  setRows(sorted);
+
+                  // Re-seed edits (same logic as initial fetch)
+                  const next = {};
+                  for (const row of sorted) {
+                    const id = row["ID"];
+                    next[id] = {
+                      notes: row["Notes"] || "",
+                      jobId: row["Job ID"] || "",
+                      costCodeCode: row["Cost Code"] || "",
+                      glAccountCode: row["GL Account"] || "",
+                      divisionCode: (row["Division"] || "").toString().trim(),
+                    };
+                  }
+
+                  // =================== START NEW: MERGE OVERLAY (MINE) ===================
+                  // Restore any unsaved edits for rows other than the parent.
+                  for (const [k, v] of Object.entries(prevEdits)) {
+                    const id = String(k);
+                    if (id === parentId) continue; // parent removed/split
+                    next[id] = next[id] ? { ...next[id], ...v } : { ...v };
+                  }
+                  setEdits(next);
+                  // ==================== END NEW: MERGE OVERLAY (MINE) ====================
+
+                  // Clear selection
+                  setSelectedMine(new Set());
+                }
+              } else if (splitCtx?.scope === "appr") {
+                // Re-fetch Approvals
+                const token = await auth.currentUser?.getIdToken();
+                const res3 = await fetch(
+                  `${import.meta.env.VITE_API_BASE}/api/approvals/submitted`,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                const j3 = await res3.json();
+                if (!res3.ok) {
+                  alert(j3.error || "Reload failed");
+                } else {
+                  const groups = Array.isArray(j3.groups) ? j3.groups : [];
+                  const sortedGroups = groups.map((g) => ({
+                    ...g,
+                    rows: sortByTxn(g.rows),
+                  }));
+                  setApprovals(sortedGroups);
+
+                  // Re-seed approvalsEdits (same logic as initial fetch)
+                  const seed = {};
+                  for (const g of sortedGroups) {
+                    for (const row of g.rows || []) {
+                      const id = row["ID"];
+                      const hasJob = !!(row["Job ID"] && String(row["Job ID"]).trim());
+
+                      seed[id] = {
+                        notes: row["Notes"] || "",
+                        jobId: row["Job ID"] || "",
+                        costCodeCode: row["Cost Code"] || "",
+                        glAccountCode: hasJob ? "" : row["GL Account"] || "",
+                        divisionCode: hasJob
+                          ? ""
+                          : (row["Division"] || "").toString().trim(),
+                      };
+                    }
+                  }
+
+                  // ================= START NEW: MERGE OVERLAY (APPROVALS) =================
+                  for (const [k, v] of Object.entries(prevApprEdits)) {
+                    const id = String(k);
+                    if (id === parentId) continue; // parent removed/split
+                    seed[id] = seed[id] ? { ...seed[id], ...v } : { ...v };
+                  }
+                  setApprovalsEdits(seed);
+                  // ================== END NEW: MERGE OVERLAY (APPROVALS) ==================
+
+                  // Clear selection for this purchaser
+                  if (splitCtx?.purchaser) {
+                    setSelectedByGroup((prev) => {
+                      const copy = { ...prev };
+                      copy[splitCtx.purchaser] = new Set();
+                      return copy;
+                    });
+                  }
+                }
+              }
+
+              // ******************************************************************
+              // *************** END: Split POST + single re-fetch (NEW) **********
+              // ******************************************************************
             } catch (e) {
               console.error(e);
               alert("Network error while splitting");

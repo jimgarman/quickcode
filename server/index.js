@@ -249,6 +249,49 @@ async function appendRows({ sheets, spreadsheetId, title, values }) {
   })
 }
 
+/* ==================== START: Helper to delete a sheet row by index (NEW) ====================
+   Purpose: After a successful split, remove the parent row that is now marked "Split".
+   Implementation details:
+     - We must use the Sheets `spreadsheets.batchUpdate` API (not Values API) to delete rows.
+     - The API needs the numeric `sheetId` (not the title), so we look it up once by title.
+     - Row indices for deleteDimension are 0-based, half-open [start, end). Our rows are 1-based.
+       Therefore to delete row `rowNum1`, we send startIndex = rowNum1 - 1, endIndex = rowNum1.
+   NOTE: We intentionally keep this helper narrowly scoped and do not touch other behaviors.
+================================================================================================ */
+async function getSheetIdByTitle(sheets, spreadsheetId, title) {
+  const { data } = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets(properties(sheetId,title))',
+  })
+  const found = (data.sheets || []).find(s => s.properties?.title === title)
+  return found?.properties?.sheetId ?? null
+}
+
+async function deleteRowByNumber({ sheets, spreadsheetId, title, rowNum1 }) {
+  const sheetId = await getSheetIdByTitle(sheets, spreadsheetId, title)
+  if (sheetId == null) throw new Error(`Sheet "${title}" not found`)
+  // Header is row 1; guard against deleting header
+  if (rowNum1 <= 1) throw new Error('Refusing to delete header row')
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: 'ROWS',
+              startIndex: rowNum1 - 1, // inclusive (0-based)
+              endIndex: rowNum1,       // exclusive
+            },
+          },
+        },
+      ],
+    },
+  })
+}
+/* ===================== END: Helper to delete a sheet row by index (NEW) ===================== */
+
 // ---- sanity routes
 app.get('/ping', (req, res) => res.json({ ok: true }))
 app.get('/sheets/test', async (req, res) => {
@@ -418,6 +461,18 @@ app.post('/api/log/split', async (req, res) => {
           values: updated,
         })
       }
+
+      /* ==================== START: Delete parent row after split (NEW) ====================
+         Immediately remove the parent row that is now marked "Split".
+         This keeps the Google Sheet clean so only the new child rows remain.
+      ===================================================================================== */
+      try {
+        await deleteRowByNumber({ sheets, spreadsheetId, title, rowNum1 })
+      } catch (delErr) {
+        console.error('Warning: failed to delete parent row after split:', delErr)
+        // Non-fatal: children are already appended; we simply leave the parent row as "Split".
+      }
+      /* ===================== END: Delete parent row after split (NEW) ===================== */
     }
 
     return res.json({ ok: true, dryRun, assignIds, parentSummary, preview, childrenPreview, appended })
