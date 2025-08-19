@@ -77,8 +77,8 @@ function fmtCell(header, value) {
       d = new Date(v.replace(/-/g, "/"));
     }
     if (Number.isNaN(d.getTime())) return v;
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1);
+    const dd = String(d.getDate());
     return `${mm}/${dd}`;
   }
   return value ?? "";
@@ -112,6 +112,25 @@ function prettyCurrency(raw) {
   return (cents / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
 }
 // ===== END: Currency Input Sanitizers =====
+
+
+
+/* ========================================================================
+   =================== START: Job ID Augment (ADD 100-GIVE) ===============
+   Purpose: Ensure the Job ID dropdown always includes "100-GIVE", even if
+            it is not present in the "Feed - Job Master" lookup results.
+   Scope:  UI-only; no backend or sheet changes.
+   Notes:  - Dedupe via Set
+           - Cast all to string defensively
+           - Optional alpha sort retained for consistent UX
+   ====================================================================== */
+function ensureGive(list) {
+  const set = new Set((list || []).map(String));
+  set.add("100-GIVE");
+  return Array.from(set).sort();
+}
+/* ==================== END: Job ID Augment (ADD 100-GIVE) ================ 
+   ====================================================================== */
 
 
 
@@ -440,7 +459,13 @@ export default function App() {
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-        setJobIds(json.jobIds || []);
+        /* ********************************************************************
+           ******************* START: Inject 100-GIVE into Job IDs *************
+           Ensures the Job ID dropdown always includes "100-GIVE".
+           ******************************************************************** */
+        setJobIds(ensureGive(json.jobIds || []));
+        /* ******************** END: Inject 100-GIVE into Job IDs **************
+           ******************************************************************** */
         setCostCodes(json.costCodes || []);
         setGlAccounts(json.glAccounts || []);
         setUsersByEmail(json.usersByEmail || {});
