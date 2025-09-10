@@ -421,6 +421,49 @@ export default function App() {
      Drives the "Processing…" UI and disables Confirm while the split request runs. */
   const [splitting, setSplitting] = useState(false);
   /* ===== END: Split processing state (NEW) ===== */
+  
+  // ===== START: Prefill edited flags (per field, per row) =====
+  // Tracks whether the user has edited a field so the green border hint disappears.
+  // Shape: { [id]: { notes?: boolean, jobId?: boolean, costCodeCode?: boolean, divisionCode?: boolean, glAccountCode?: boolean } }
+  const [prefillEdited, setPrefillEdited] = useState({});          // for "Your Transactions"
+  const [approvalsPrefillEdited, setApprovalsPrefillEdited] = useState({}); // for Approvals
+  // Map headers to edit keys
+  const FIELD_TO_KEYS = {
+    Notes: "notes",
+    "Job ID": "jobId",
+    "Cost Code": "costCodeCode",
+    Division: "divisionCode",
+    "GL Account": "glAccountCode",
+  };
+  function isStatusNew(row) {
+    const s = String(row?.["Status"] ?? row?.status ?? "").trim().toLowerCase();
+    return s === "new";
+  }
+  function wasPrefilled(row, header) {
+    const v = String(row?.[header] ?? "").trim();
+    return v.length > 0;
+  }
+  function wasUserEdited(scope, id, key) {
+    if (!key) return false;
+    const map = scope === "mine" ? prefillEdited : approvalsPrefillEdited;
+    return !!(map?.[id]?.[key]);
+  }
+  function markFieldEdited(scope, id, key) {
+    if (!key) return;
+    if (scope === "mine") {
+      setPrefillEdited((prev) => {
+        const cur = { ...(prev[id] || {}) };
+        if (cur[key]) return prev; // already marked
+        return { ...prev, [id]: { ...cur, [key]: true } };
+      });
+    } else {
+      setApprovalsPrefillEdited((prev) => {
+        const cur = { ...(prev[id] || {}) };
+        if (cur[key]) return prev;
+        return { ...prev, [id]: { ...cur, [key]: true } };
+      });
+    }
+  }
   // ===== END: State =====
 
 
@@ -709,9 +752,9 @@ export default function App() {
   const thStyle = "qc-th";
   const tdStyle = "qc-td";
 
-  const Select = ({ value, onChange, disabled, children }) => (
+  const Select = ({ value, onChange, disabled, children, className }) => (
     <select
-      className={`qc-select ${!value ? "placeholder" : ""}`}
+      className={`qc-select ${!value ? "placeholder" : ""} ${className || ""}`}
       value={value ?? ""}
       onChange={onChange}
       disabled={disabled}
@@ -758,32 +801,45 @@ export default function App() {
     const disables = computeDisables(e);
 
     if (h === "Notes") {
+      const isNew = isStatusNew(e.row);
+      const key = FIELD_TO_KEYS[h];
+      const prefilled = isNew && wasPrefilled(e.row, h);
+      const edited = wasUserEdited(scope, id, key);
+      const green = prefilled && !edited;
       return (
         <td key={`${id}-notes`} className={tdStyle}>
           <input
-            className={`qc-input ${notesInvalid ? "qc-invalid" : ""}`}
+            className={`qc-input ${notesInvalid ? "qc-invalid" : ""} ${green ? "qc-prefilled" : ""}`}
             placeholder="add notes…"
             value={e.notes ?? ""}
-            onChange={(ev) =>
+            onChange={(ev) => {
+              markFieldEdited(scope, id, key);
               setEditState((prev) => ({
                 ...prev,
                 [id]: { ...(prev[id] || {}), notes: ev.target.value },
-              }))
-            }
+              }));
+            }}
           />
         </td>
       );
     }
 
     if (h === "Division") {
+      const isNew = isStatusNew(e.row);
+      const key = FIELD_TO_KEYS[h];
+      const prefilled = isNew && wasPrefilled(e.row, h);
+      const edited = wasUserEdited(scope, id, key);
+      const green = prefilled && !edited && !disables.disableDiv;
       return (
         <td key={`${id}-div`} className={tdStyle}>
           <Select
             value={e.divisionCode ?? ""}
             disabled={disables.disableDiv}
-            onChange={(ev) =>
-              withEdit(setEditState, id, { divisionCode: ev.target.value })
-            }
+            className={green ? "qc-prefilled" : ""}
+            onChange={(ev) => {
+              markFieldEdited(scope, id, key);
+              withEdit(setEditState, id, { divisionCode: ev.target.value });
+            }}
           >
             {/* alphabetic */}
             <option value={DIVISION_LABEL_TO_CODE.Raleigh}>Raleigh</option>
@@ -794,12 +850,21 @@ export default function App() {
     }
 
     if (h === "Job ID") {
+      const isNew = isStatusNew(e.row);
+      const key = FIELD_TO_KEYS[h];
+      const prefilled = isNew && wasPrefilled(e.row, h);
+      const edited = wasUserEdited(scope, id, key);
+      const green = prefilled && !edited && !disables.disableJob;
       return (
         <td key={`${id}-job`} className={tdStyle}>
           <Select
             value={e.jobId ?? ""}
             disabled={disables.disableJob}
-            onChange={(ev) => withEdit(setEditState, id, { jobId: ev.target.value })}
+            className={green ? "qc-prefilled" : ""}
+            onChange={(ev) => {
+              markFieldEdited(scope, id, key);
+              withEdit(setEditState, id, { jobId: ev.target.value });
+            }}
           >
             {(jobIds || []).map((j) => (
               <option key={j} value={j}>
@@ -812,14 +877,21 @@ export default function App() {
     }
 
     if (h === "Cost Code") {
+      const isNew = isStatusNew(e.row);
+      const key = FIELD_TO_KEYS[h];
+      const prefilled = isNew && wasPrefilled(e.row, h);
+      const edited = wasUserEdited(scope, id, key);
+      const green = prefilled && !edited && !disables.disableCost;
       return (
         <td key={`${id}-cost`} className={tdStyle}>
           <Select
             value={e.costCodeCode ?? ""}
             disabled={disables.disableCost}
-            onChange={(ev) =>
-              withEdit(setEditState, id, { costCodeCode: ev.target.value })
-            }
+            className={green ? "qc-prefilled" : ""}
+            onChange={(ev) => {
+              markFieldEdited(scope, id, key);
+              withEdit(setEditState, id, { costCodeCode: ev.target.value });
+            }}
           >
             {(costCodes || []).map((c) => (
               <option key={c.code} value={c.code}>
@@ -832,14 +904,21 @@ export default function App() {
     }
 
     if (h === "GL Account") {
+      const isNew = isStatusNew(e.row);
+      const key = FIELD_TO_KEYS[h];
+      const prefilled = isNew && wasPrefilled(e.row, h);
+      const edited = wasUserEdited(scope, id, key);
+      const green = prefilled && !edited && !disables.disableGL;
       return (
         <td key={`${id}-gl`} className={tdStyle}>
           <Select
             value={e.glAccountCode ?? ""}
             disabled={disables.disableGL}
-            onChange={(ev) =>
-              withEdit(setEditState, id, { glAccountCode: ev.target.value })
-            }
+            className={green ? "qc-prefilled" : ""}
+            onChange={(ev) => {
+              markFieldEdited(scope, id, key);
+              withEdit(setEditState, id, { glAccountCode: ev.target.value });
+            }}
           >
             {(glAccounts || []).map((g) => (
               <option key={g.code} value={g.code}>

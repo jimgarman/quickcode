@@ -35,6 +35,10 @@ server/dist/
 client/.env
 server/.env
 
+# Explicit secret files (defense-in-depth)
+server/credentials/service-account.json
+client/.env.local
+
 # Ignore root-level package and manifest files
 /package.json
 /package-lock.json

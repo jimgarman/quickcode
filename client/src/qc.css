@@ -64,6 +64,12 @@
 .qc-select.placeholder,
 .qc-input::placeholder{ color:var(--qc-placeholder); }
 
+/* Prefilled highlight (disappears on first edit) */
+.qc-prefilled{
+  border-color:#28a745 !important;
+  box-shadow:inset 0 0 0 1px rgba(40,167,69,0.08);
+}
+
 /* ================================
    Table: base styles
    ================================ */
